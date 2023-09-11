@@ -1,10 +1,8 @@
 package ru.netology.jdbc_dao.repository;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-        import org.springframework.stereotype.Repository;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,28 +10,26 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 
-@Repository
+@org.springframework.stereotype.Repository
 public class ProductRepository {
+    private final String scriptFileName = read("product_name.sql");
+    private final JdbcTemplate jdbcTemplate;
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
-
-    @Value("classpath:product_name.sql")
-    private Resource productQuery;
-
-    public ProductRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public ProductRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public String getProductName(String name) {
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        params.addValue("name", name);
-
-        try (InputStream is = productQuery.getInputStream();
+    private static String read(String scriptFileName) {
+        try (InputStream is = new ClassPathResource(scriptFileName).getInputStream();
              BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is))) {
-            String query = bufferedReader.lines().collect(Collectors.joining("\n"));
-            return jdbcTemplate.queryForObject(query, params, String.class);
+            return bufferedReader.lines().collect(Collectors.joining("\n"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+    public String getProductName(String productName) {
+        return jdbcTemplate.queryForObject(scriptFileName, String.class, productName);
+    }
 }
+
